@@ -1,50 +1,167 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { trpc } from "@/utils/trpc";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import logoImage from "@/assets/favicon.png";
+import { SearchDemo } from "@/components/visual-search/SearchDemo";
+import { VendorUpload } from "@/components/visual-search/VendorUpload";
+import { API_ENDPOINTS } from "@/lib/visual-search-config";
 
 export const Route = createFileRoute("/")({
-	component: HomeComponent,
+  component: VisualSearchPage,
 });
 
-const TITLE_TEXT = `
- ██████╗ ███████╗████████╗████████╗███████╗██████╗
- ██╔══██╗██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
- ██████╔╝█████╗     ██║      ██║   █████╗  ██████╔╝
- ██╔══██╗██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗
- ██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║
- ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝
+type HealthStatus = {
+  status: string;
+  services: {
+    embeddings: string;
+  };
+  productCount: number;
+};
 
- ████████╗    ███████╗████████╗ █████╗  ██████╗██╗  ██╗
- ╚══██╔══╝    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
-    ██║       ███████╗   ██║   ███████║██║     █████╔╝
-    ██║       ╚════██║   ██║   ██╔══██║██║     ██╔═██╗
-    ██║       ███████║   ██║   ██║  ██║╚██████╗██║  ██╗
-    ╚═╝       ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
- `;
+function VisualSearchPage() {
+  const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-function HomeComponent() {
-	const healthCheck = useQuery(trpc.healthCheck.queryOptions());
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const response = await fetch(API_ENDPOINTS.health);
+        if (response.ok) {
+          const data = await response.json();
+          setHealth(data);
+          setIsConnected(true);
+        } else {
+          setIsConnected(false);
+          setHealth(null);
+        }
+      } catch {
+        setIsConnected(false);
+        setHealth(null);
+      }
+    };
 
-	return (
-		<div className="container mx-auto max-w-3xl px-4 py-2">
-			<pre className="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
-			<div className="grid gap-6">
-				<section className="rounded-lg border p-4">
-					<h2 className="mb-2 font-medium">API Status</h2>
-					<div className="flex items-center gap-2">
-						<div
-							className={`h-2 w-2 rounded-full ${healthCheck.data ? "bg-green-500" : "bg-red-500"}`}
-						/>
-						<span className="text-sm text-muted-foreground">
-							{healthCheck.isLoading
-								? "Checking..."
-								: healthCheck.data
-									? "Connected"
-									: "Disconnected"}
-						</span>
-					</div>
-				</section>
-			</div>
-		</div>
-	);
+    const startPolling = (intervalMs: number) => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      intervalRef.current = setInterval(checkHealth, intervalMs);
+    };
+
+    checkHealth();
+    // Start with 3s polling, will adjust based on connection state
+    startPolling(3000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  // Adjust polling interval based on connection state
+  useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    // 3s when disconnected, 30s when connected
+    const intervalMs = isConnected ? 10_000 : 3000;
+    intervalRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(API_ENDPOINTS.health);
+        if (response.ok) {
+          const data = await response.json();
+          setHealth(data);
+          setIsConnected(true);
+        } else {
+          setIsConnected(false);
+          setHealth(null);
+        }
+      } catch {
+        setIsConnected(false);
+        setHealth(null);
+      }
+    }, intervalMs);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isConnected]);
+
+  return (
+    <div className="min-h-screen bg-gray-950">
+      {/* Hero Header */}
+      <header className="border-gray-800/50 border-b bg-gray-900/80 backdrop-blur-xl">
+        <div className="container mx-auto max-w-7xl px-4 py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <img
+                alt="Nymo Logo"
+                className="h-14 w-14 object-contain"
+                src={logoImage}
+              />
+              <div>
+                <h1 className="font-bold text-2xl text-white tracking-tight">
+                  Nymo Search Demo
+                </h1>
+                <p className="text-gray-400">
+                  AI-powered image & text product search
+                </p>
+              </div>
+            </div>
+
+            {/* Status Indicator */}
+            <div
+              className={`flex items-center gap-2 rounded-full px-4 py-2 font-medium text-sm transition-all ${
+                isConnected
+                  ? "bg-emerald-900/30 text-emerald-400"
+                  : "bg-red-900/30 text-red-400"
+              }`}
+            >
+              {isConnected ? (
+                <>
+                  <span>Connected</span>
+                  {health && (
+                    <span className="ml-1 opacity-70">
+                      • {health.productCount} products
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span>Disconnected</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto max-w-7xl px-4 py-8">
+        {/* Two-Column Layout */}
+        <div className="grid gap-8 lg:grid-cols-2">
+          {/* Vendor Upload Panel */}
+          <div className="rounded-3xl border border-gray-800 bg-gray-900 p-6 shadow-xl">
+            <VendorUpload />
+          </div>
+
+          {/* Search Demo Panel */}
+          <div className="rounded-3xl border border-gray-800 bg-gray-900 p-6 shadow-xl">
+            <SearchDemo />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-12 text-center">
+          <p className="text-gray-600 text-sm">
+            Powered by{" "}
+            <span className="font-medium text-indigo-500">Jina CLIP v2</span>{" "}
+            multimodal embeddings
+          </p>
+        </footer>
+      </main>
+    </div>
+  );
 }

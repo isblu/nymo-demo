@@ -3,7 +3,7 @@
  * Spawns and manages the Python embedding server as a child process
  */
 
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,17 +30,13 @@ export async function startPythonServer(): Promise<void> {
     console.log(`[Python] Python: ${VENV_PYTHON}`);
 
     // Run server.py directly using the venv's Python executable
-    pythonProcess = spawn(
-      VENV_PYTHON,
-      ["server.py"],
-      {
-        cwd: PYTHON_DIR,
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: false,
-        // Set PYTHONUNBUFFERED to get output immediately
-        env: { ...process.env, PYTHONUNBUFFERED: "1" },
-      }
-    );
+    pythonProcess = spawn(VENV_PYTHON, ["server.py"], {
+      cwd: PYTHON_DIR,
+      stdio: ["ignore", "pipe", "pipe"],
+      detached: false,
+      // Set PYTHONUNBUFFERED to get output immediately
+      env: { ...process.env, PYTHONUNBUFFERED: "1" },
+    });
 
     let started = false;
 
@@ -49,7 +45,10 @@ export async function startPythonServer(): Promise<void> {
       console.log(`[Python] ${output.trim()}`);
 
       // Check if server started successfully
-      if (output.includes("Uvicorn running") || output.includes("Application startup complete")) {
+      if (
+        output.includes("Uvicorn running") ||
+        output.includes("Application startup complete")
+      ) {
         started = true;
         resolve();
       }
@@ -60,7 +59,10 @@ export async function startPythonServer(): Promise<void> {
       // Uvicorn logs to stderr by default
       console.log(`[Python] ${output.trim()}`);
 
-      if (output.includes("Uvicorn running") || output.includes("Application startup complete")) {
+      if (
+        output.includes("Uvicorn running") ||
+        output.includes("Application startup complete")
+      ) {
         started = true;
         resolve();
       }
@@ -85,7 +87,7 @@ export async function startPythonServer(): Promise<void> {
         console.log("[Python] Startup timeout - assuming server is ready");
         resolve();
       }
-    }, 120000);
+    }, 120_000);
   });
 }
 

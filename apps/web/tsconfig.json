@@ -8,17 +8,10 @@
     "moduleResolution": "Bundler",
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "types": [
-      "vite/client"
-    ],
-    "rootDirs": [
-      "."
-    ],
-    "baseUrl": ".",
+    "types": ["vite/client"],
+    "rootDirs": ["."],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     },
     "strictNullChecks": true
   }
