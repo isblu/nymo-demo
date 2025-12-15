@@ -1,0 +1,92 @@
+/**
+ * Jina CLIP Embeddings Client
+ * Handles text and image embeddings via the Python embedding server
+ */
+
+const PYTHON_EMBED_URL =
+  process.env.PYTHON_EMBED_URL || "http://localhost:8001";
+
+type EmbeddingResponse = {
+  embedding: number[];
+  dimensions: number;
+};
+
+/**
+ * Generate a text embedding using the Python embedding server
+ * @param text - Text to embed
+ * @returns Embedding vector (already normalized by jina-clip)
+ */
+export async function embedText(text: string): Promise<number[]> {
+  try {
+    const response = await fetch(`${PYTHON_EMBED_URL}/embed/text`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Embedding API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = (await response.json()) as EmbeddingResponse;
+    console.log(
+      `[Embeddings] Text: "${text.slice(0, 50)}..." -> ${data.dimensions} dims`
+    );
+
+    return data.embedding;
+  } catch (error) {
+    console.error("[Embeddings] Error generating text embedding:", error);
+    throw error;
+  }
+}
+
+/**
+ * Generate an image embedding using the Python embedding server
+ * @param imageBase64 - Base64 encoded image (with or without data URI prefix)
+ * @returns Embedding vector (already normalized by jina-clip)
+ */
+export async function embedImage(imageBase64: string): Promise<number[]> {
+  try {
+    const response = await fetch(`${PYTHON_EMBED_URL}/embed/image`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ imageBase64 }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Embedding API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = (await response.json()) as EmbeddingResponse;
+    console.log(`[Embeddings] Image embedded -> ${data.dimensions} dims`);
+
+    return data.embedding;
+  } catch (error) {
+    console.error("[Embeddings] Error generating image embedding:", error);
+    throw error;
+  }
+}
+
+/**
+ * Check if Python embedding server is available
+ */
+export async function checkEmbeddingsHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${PYTHON_EMBED_URL}/health`, {
+      method: "GET",
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data.model_loaded === true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
