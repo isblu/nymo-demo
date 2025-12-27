@@ -1,9 +1,5 @@
-"""
-Jina CLIP v2 Embedding Server
-FastAPI server for multimodal text and image embeddings
-"""
-
 import base64
+import os
 from contextlib import asynccontextmanager
 from io import BytesIO
 
@@ -15,23 +11,27 @@ from PIL import Image
 from pydantic import BaseModel
 from transformers import AutoModel
 
-# Global model reference
 model = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load model on startup, cleanup on shutdown."""
     global model
-    print("[Embedding Server] Loading jina-clip-v2 model from HuggingFace...")
     
+    # Force offline mode
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    
+    print("[Embedding Server] Loading jina-clip-v2 model from local storage...")
+    
+    model_path = os.path.abspath("./jina-v2-local")
     model = AutoModel.from_pretrained(
-        "jinaai/jina-clip-v2",
+        model_path,
         trust_remote_code=True,
-        torch_dtype=torch.float16,
+        dtype=torch.float16,
+        local_files_only=True,
     )
     
-    # Move to GPU if available
     if torch.cuda.is_available():
         model = model.cuda()
         print("[Embedding Server] Model loaded on CUDA GPU")
