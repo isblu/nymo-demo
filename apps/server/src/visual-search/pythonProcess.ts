@@ -12,10 +12,9 @@ const __dirname = dirname(__filename);
 
 // Path to Python directory
 const PYTHON_DIR = join(__dirname, "..", "..", "python");
-const PYTHON_PORT = process.env.PYTHON_EMBED_PORT || "8001";
 
 // Use the venv's Python executable directly
-const VENV_PYTHON = join(PYTHON_DIR, "jina_env", "Scripts", "python.exe");
+const VENV_PYTHON = join(PYTHON_DIR, ".jina_env", "Scripts", "python.exe");
 
 let pythonProcess: ChildProcess | null = null;
 
@@ -23,7 +22,7 @@ let pythonProcess: ChildProcess | null = null;
  * Start the Python embedding server
  * Runs the venv's Python directly with server.py
  */
-export async function startPythonServer(): Promise<void> {
+export function startPythonServer(): Promise<void> {
   return new Promise((resolve, reject) => {
     console.log("[Python] Starting embedding server...");
     console.log(`[Python] Directory: ${PYTHON_DIR}`);
