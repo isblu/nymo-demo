@@ -1,8 +1,3 @@
-/**
- * Python Embedding Server Process Manager
- * Spawns and manages the Python embedding server as a child process
- */
-
 import { type ChildProcess, spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,30 +5,22 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Path to Python directory
 const PYTHON_DIR = join(__dirname, "..", "..", "python");
 
-// Use the venv's Python executable directly
 const VENV_PYTHON = join(PYTHON_DIR, ".jina_env", "Scripts", "python.exe");
 
 let pythonProcess: ChildProcess | null = null;
 
-/**
- * Start the Python embedding server
- * Runs the venv's Python directly with server.py
- */
 export function startPythonServer(): Promise<void> {
   return new Promise((resolve, reject) => {
     console.log("[Python] Starting embedding server...");
     console.log(`[Python] Directory: ${PYTHON_DIR}`);
     console.log(`[Python] Python: ${VENV_PYTHON}`);
 
-    // Run server.py directly using the venv's Python executable
     pythonProcess = spawn(VENV_PYTHON, ["server.py"], {
       cwd: PYTHON_DIR,
       stdio: ["ignore", "pipe", "pipe"],
       detached: false,
-      // Set PYTHONUNBUFFERED to get output immediately
       env: { ...process.env, PYTHONUNBUFFERED: "1" },
     });
 
@@ -43,7 +30,6 @@ export function startPythonServer(): Promise<void> {
       const output = data.toString();
       console.log(`[Python] ${output.trim()}`);
 
-      // Check if server started successfully
       if (
         output.includes("Uvicorn running") ||
         output.includes("Application startup complete")
@@ -55,7 +41,6 @@ export function startPythonServer(): Promise<void> {
 
     pythonProcess.stderr?.on("data", (data: Buffer) => {
       const output = data.toString();
-      // Uvicorn logs to stderr by default
       console.log(`[Python] ${output.trim()}`);
 
       if (
@@ -90,9 +75,6 @@ export function startPythonServer(): Promise<void> {
   });
 }
 
-/**
- * Stop the Python embedding server
- */
 export function stopPythonServer(): void {
   if (pythonProcess) {
     console.log("[Python] Stopping embedding server...");
@@ -101,14 +83,10 @@ export function stopPythonServer(): void {
   }
 }
 
-/**
- * Check if Python server is running
- */
 export function isPythonServerRunning(): boolean {
   return pythonProcess !== null && !pythonProcess.killed;
 }
 
-// Handle process exit to cleanup Python server
 process.on("exit", () => {
   stopPythonServer();
 });

@@ -48,7 +48,6 @@ function VisualSearchPage() {
     };
 
     checkHealth();
-    // Start with 3s polling, will adjust based on connection state
     startPolling(3000);
 
     return () => {
@@ -58,12 +57,10 @@ function VisualSearchPage() {
     };
   }, []);
 
-  // Adjust polling interval based on connection state
   useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-    // 3s when disconnected, 30s when connected
     const intervalMs = isConnected ? 10_000 : 3000;
     intervalRef.current = setInterval(async () => {
       try {
@@ -91,7 +88,6 @@ function VisualSearchPage() {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      {/* Hero Header */}
       <header className="border-gray-800/50 border-b bg-gray-900/80 backdrop-blur-xl">
         <div className="container mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -99,7 +95,9 @@ function VisualSearchPage() {
               <img
                 alt="Nymo Logo"
                 className="h-14 w-14 object-contain"
+                height={56}
                 src={logoImage}
+                width={56}
               />
               <div>
                 <h1 className="font-bold text-2xl text-white tracking-tight">
@@ -111,7 +109,6 @@ function VisualSearchPage() {
               </div>
             </div>
 
-            {/* Status Indicator */}
             <div
               className={`flex items-center gap-2 rounded-full px-4 py-2 font-medium text-sm transition-all ${
                 isConnected
@@ -122,38 +119,31 @@ function VisualSearchPage() {
               {isConnected ? (
                 <>
                   <span>Connected</span>
-                  {health && (
+                  {health !== null ? (
                     <span className="ml-1 opacity-70">
                       • {health.productCount} products
                     </span>
-                  )}
+                  ) : null}
                 </>
               ) : (
-                <>
-                  <span>Disconnected</span>
-                </>
+                <span>Disconnected</span>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto max-w-7xl px-4 py-8">
-        {/* Two-Column Layout */}
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Vendor Upload Panel */}
           <div className="rounded-3xl border border-gray-800 bg-gray-900 p-6 shadow-xl">
             <VendorUpload />
           </div>
 
-          {/* Search Demo Panel */}
           <div className="rounded-3xl border border-gray-800 bg-gray-900 p-6 shadow-xl">
             <SearchDemo />
           </div>
         </div>
 
-        {/* Footer */}
         <footer className="mt-12 text-center">
           <p className="text-gray-600 text-sm">
             Powered by{" "}

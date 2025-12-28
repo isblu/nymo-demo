@@ -4,9 +4,7 @@ export type CreateContextOptions = {
   context: ElysiaContext;
 };
 
-export async function createContext({
-  context: _context,
-}: CreateContextOptions) {
+export function createContext({ context: _context }: CreateContextOptions) {
   return {};
 }
 

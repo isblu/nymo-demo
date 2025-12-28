@@ -1,8 +1,3 @@
-/**
- * Visual Search Routes
- * Elysia router for visual search API endpoints
- */
-
 import { Elysia } from "elysia";
 import { checkEmbeddingsHealth, embedImage, embedText } from "./embeddings";
 import { cosineSimilarity } from "./similarity";
@@ -20,19 +15,12 @@ import type {
   SearchResult,
 } from "./types";
 
-/**
- * Remove embedding from product for API response
- */
 function toProductWithoutEmbedding(product: Product): ProductWithoutEmbedding {
-  const { embedding, ...rest } = product;
+  const { ...rest } = product;
   return rest;
 }
 
-/**
- * Visual Search Elysia Plugin
- */
 export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
-  // Health check
   .get("/health", async () => {
     const embeddingsOk = await checkEmbeddingsHealth();
 
@@ -45,19 +33,16 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
     };
   })
 
-  // List all products
   .get("/products", () => {
     const products = getProducts();
     console.log(`[VS] Listing ${products.length} products`);
     return { products };
   })
 
-  // Add a new product (Vendor flow)
   .post("/products", async ({ body, set }) => {
     const reqBody = body as { name?: string; imageBase64?: string };
     const { name, imageBase64 } = reqBody;
 
-    // Manual validation
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       set.status = 400;
       return { error: "Invalid request", message: "Product name is required" };
@@ -75,11 +60,9 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
     console.log(`[VS] Adding product: ${name}`);
 
     try {
-      // Generate image embedding directly using jina-clip
       console.log("[VS] Generating image embedding...");
       const embedding = await embedImage(imageBase64);
 
-      // Create and store the product
       const product: Product = {
         id: crypto.randomUUID(),
         name: name.trim(),
@@ -107,12 +90,10 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
     }
   })
 
-  // Visual search by image (Consumer flow - Image → Image)
   .post("/search", async ({ body, set }) => {
     const reqBody = body as { imageBase64?: string; topK?: number };
     const { imageBase64, topK = 10 } = reqBody;
 
-    // Manual validation
     if (
       !imageBase64 ||
       typeof imageBase64 !== "string" ||
@@ -137,25 +118,21 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
     }
 
     try {
-      // Generate image embedding for the query image
       console.log("[VS] Generating query image embedding...");
       const queryEmbedding = await embedImage(imageBase64);
 
-      // Compute similarity scores for all products (image-to-image)
       console.log("[VS] Computing similarities...");
       const scored = products.map((product) => ({
         product,
         score: cosineSimilarity(queryEmbedding, product.embedding),
       }));
 
-      // Sort by similarity (descending) and take top K
       scored.sort((a, b) => b.score - a.score);
       const topResults = scored.slice(0, effectiveTopK);
 
-      // Format response
       const results: SearchResult[] = topResults.map(({ product, score }) => ({
         product: toProductWithoutEmbedding(product),
-        score: Math.round(score * 10_000) / 10_000, // Round to 4 decimal places
+        score: Math.round(score * 10_000) / 10_000,
       }));
 
       console.log(
@@ -177,12 +154,10 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
     }
   })
 
-  // Text search by query string (Consumer flow - Text → Image)
   .post("/search/text", async ({ body, set }) => {
     const reqBody = body as { query?: string; topK?: number };
     const { query, topK = 10 } = reqBody;
 
-    // Manual validation
     if (!query || typeof query !== "string" || query.trim().length === 0) {
       set.status = 400;
       return { error: "Invalid request", message: "Search query is required" };
@@ -203,25 +178,21 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
     }
 
     try {
-      // Generate text embedding for the query (cross-modal: text → image)
       console.log("[VS] Generating query text embedding...");
       const queryEmbedding = await embedText(query.trim());
 
-      // Compute similarity scores against image embeddings
       console.log("[VS] Computing cross-modal similarities...");
       const scored = products.map((product) => ({
         product,
         score: cosineSimilarity(queryEmbedding, product.embedding),
       }));
 
-      // Sort by similarity (descending) and take top K
       scored.sort((a, b) => b.score - a.score);
       const topResults = scored.slice(0, effectiveTopK);
 
-      // Format response
       const results: SearchResult[] = topResults.map(({ product, score }) => ({
         product: toProductWithoutEmbedding(product),
-        score: Math.round(score * 10_000) / 10_000, // Round to 4 decimal places
+        score: Math.round(score * 10_000) / 10_000,
       }));
 
       console.log(

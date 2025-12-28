@@ -1,11 +1,3 @@
-/**
- * Vector Similarity Utilities
- * Functions for computing similarity between embedding vectors
- */
-
-/**
- * Compute dot product of two vectors
- */
 export function dotProduct(a: number[], b: number[]): number {
   if (a.length !== b.length) {
     throw new Error(`Vector dimension mismatch: ${a.length} vs ${b.length}`);
@@ -20,10 +12,6 @@ export function dotProduct(a: number[], b: number[]): number {
   return sum;
 }
 
-/**
- * Compute cosine similarity between two vectors
- * If vectors are already normalized (L2 norm = 1), this is just the dot product
- */
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) {
     throw new Error(`Vector dimension mismatch: ${a.length} vs ${b.length}`);
@@ -50,9 +38,6 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return dotProd / magnitude;
 }
 
-/**
- * Find top K most similar items from a list
- */
 export function topKSimilar<T>(
   query: number[],
   items: T[],

@@ -1,17 +1,9 @@
-/**
- * Visual Search API Configuration
- */
-
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
 
 export const API_ENDPOINTS = {
-  /** GET all products, POST to add new product */
   products: `${SERVER_URL}/vs/products`,
-  /** POST image search */
   search: `${SERVER_URL}/vs/search`,
-  /** POST text search */
   textSearch: `${SERVER_URL}/vs/search/text`,
-  /** GET health check */
   health: `${SERVER_URL}/vs/health`,
 };
 
@@ -40,11 +32,7 @@ export type ProductsResponse = {
   products: ProductWithoutEmbedding[];
 };
 
-/**
- * Convert a File to JPEG base64 data URL
- * Uses canvas to convert any image format to JPEG for better compatibility
- */
-export async function fileToBase64(file: File): Promise<string> {
+export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -55,7 +43,6 @@ export async function fileToBase64(file: File): Promise<string> {
         return;
       }
 
-      // Resize if too large (max 1024px on longest side)
       const maxSize = 1024;
       let width = img.width;
       let height = img.height;

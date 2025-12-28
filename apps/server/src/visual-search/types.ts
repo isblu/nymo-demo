@@ -1,8 +1,3 @@
-/**
- * Visual Search Types
- * Core interfaces for the local visual search demo
- */
-
 export type Product = {
   id: string;
   name: string;

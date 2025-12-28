@@ -18,6 +18,7 @@ const router = createRouter({
 });
 
 declare module "@tanstack/react-router" {
+  // biome-ignore lint: Declaration merging requires interface
   interface Register {
     router: typeof router;
   }

@@ -16,10 +16,99 @@ function formatScore(score: number): string {
 }
 
 function getScoreStyles(score: number): string {
-  if (score >= 0.8) return "bg-emerald-900/30 text-emerald-400";
-  if (score >= 0.6) return "bg-lime-900/30 text-lime-400";
-  if (score >= 0.4) return "bg-amber-900/30 text-amber-400";
+  if (score >= 0.8) {
+    return "bg-emerald-900/30 text-emerald-400";
+  }
+  if (score >= 0.6) {
+    return "bg-lime-900/30 text-lime-400";
+  }
+  if (score >= 0.4) {
+    return "bg-amber-900/30 text-amber-400";
+  }
   return "bg-orange-900/30 text-orange-400";
+}
+
+type SearchResultCardProps = {
+  result: SearchResult;
+  index: number;
+};
+
+function SearchResultCard({ result, index }: SearchResultCardProps) {
+  return (
+    <div
+      className="flex gap-4 rounded-xl border border-gray-700 bg-gray-800 p-4 transition-all hover:border-gray-600"
+      style={{
+        animationDelay: `${index * 50}ms`,
+        animation: "fadeInUp 0.3s ease-out forwards",
+      }}
+    >
+      <img
+        alt={result.product.name}
+        className="h-20 w-20 flex-shrink-0 rounded-lg object-cover shadow-sm"
+        height={128}
+        src={result.product.imageBase64}
+        width={128}
+      />
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="truncate font-medium text-white">
+            {result.product.name}
+          </h4>
+          <span
+            className={`flex-shrink-0 rounded-lg px-2.5 py-1 font-semibold text-xs ${getScoreStyles(result.score)}`}
+          >
+            {formatScore(result.score)}
+          </span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-700">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+            style={{ width: `${result.score * 100}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type SearchResultsProps = {
+  results: SearchResult[];
+};
+
+function SearchResults({ results }: SearchResultsProps) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <h3 className="font-semibold text-white">
+          {results.length > 0
+            ? `Found ${results.length} match${results.length !== 1 ? "es" : ""}`
+            : "No matches found"}
+        </h3>
+      </div>
+
+      {results.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {results.map((result, index) => (
+            <SearchResultCard
+              index={index}
+              key={result.product.id}
+              result={result}
+            />
+          ))}
+        </div>
+      )}
+
+      {results.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-700 border-dashed bg-gray-800/30 px-6 py-12">
+          <Search className="mb-3 h-12 w-12 text-gray-600" />
+          <p className="font-medium text-gray-400">No similar products found</p>
+          <p className="text-gray-500 text-sm">
+            Try a different image or query
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function SearchDemo() {
@@ -34,7 +123,7 @@ export function SearchDemo() {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileSelect = useCallback((file: File) => {
-    if (file && file.type.startsWith("image/")) {
+    if (file?.type.startsWith("image/")) {
       setSelectedFile(file);
       setPreview(URL.createObjectURL(file));
       setResults([]);
@@ -46,7 +135,9 @@ export function SearchDemo() {
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) handleFileSelect(file);
+      if (file) {
+        handleFileSelect(file);
+      }
     },
     [handleFileSelect]
   );
@@ -56,7 +147,9 @@ export function SearchDemo() {
       e.preventDefault();
       setIsDragging(false);
       const file = e.dataTransfer.files?.[0];
-      if (file) handleFileSelect(file);
+      if (file) {
+        handleFileSelect(file);
+      }
     },
     [handleFileSelect]
   );
@@ -71,11 +164,45 @@ export function SearchDemo() {
     setIsDragging(false);
   }, []);
 
+  const getDropZoneClassName = () => {
+    const baseClasses =
+      "relative block cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-all";
+    if (isDragging) {
+      return `${baseClasses} border-indigo-400 bg-indigo-900/20`;
+    }
+    if (preview) {
+      return `${baseClasses} border-gray-700 bg-gray-800/50`;
+    }
+    return `${baseClasses} border-gray-700 bg-gray-800/50 hover:border-indigo-500/50 hover:bg-indigo-900/10`;
+  };
+
   const handleModeChange = (mode: SearchMode) => {
     setSearchMode(mode);
     setError(null);
     setResults([]);
     setHasSearched(false);
+  };
+
+  const performSearch = async (
+    mode: SearchMode,
+    file: File | null,
+    query: string
+  ): Promise<{ response: Response | null; error: string | null }> => {
+    if (mode === "image" && file) {
+      const imageBase64 = await fileToBase64(file);
+      const result = await fetch(API_ENDPOINTS.search, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64 }),
+      }).catch(() => null);
+      return { response: result, error: result ? null : "Network error" };
+    }
+    const result = await fetch(API_ENDPOINTS.textSearch, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: query.trim() }),
+    }).catch(() => null);
+    return { response: result, error: result ? null : "Network error" };
   };
 
   const handleSearch = async () => {
@@ -91,27 +218,11 @@ export function SearchDemo() {
     setIsLoading(true);
     setError(null);
 
-    let response: Response | null = null;
-    let fetchError: string | null = null;
-
-    if (searchMode === "image") {
-      const imageBase64 = await fileToBase64(selectedFile!);
-      const result = await fetch(API_ENDPOINTS.search, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64 }),
-      }).catch(() => null);
-      response = result;
-      if (!result) fetchError = "Network error";
-    } else {
-      const result = await fetch(API_ENDPOINTS.textSearch, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: textQuery.trim() }),
-      }).catch(() => null);
-      response = result;
-      if (!result) fetchError = "Network error";
-    }
+    const { response, error: fetchError } = await performSearch(
+      searchMode,
+      selectedFile,
+      textQuery
+    );
 
     if (fetchError) {
       setError(fetchError);
@@ -119,7 +230,7 @@ export function SearchDemo() {
       return;
     }
 
-    if (!(response && response.ok)) {
+    if (!response?.ok) {
       const errorData = response ? await response.json().catch(() => ({})) : {};
       setError(errorData.message || "Search failed");
       setIsLoading(false);
@@ -176,16 +287,11 @@ export function SearchDemo() {
         </button>
       </div>
 
-      {/* Image Upload (Image Mode) */}
       {searchMode === "image" && (
-        <div
-          className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
-            isDragging
-              ? "border-indigo-400 bg-indigo-900/20"
-              : preview
-                ? "border-gray-700 bg-gray-800/50"
-                : "border-gray-700 bg-gray-800/50 hover:border-indigo-500/50 hover:bg-indigo-900/10"
-          }`}
+        // biome-ignore lint/a11y/noNoninteractiveElementInteractions: This label wraps a file input and drag handlers provide enhanced UX for file drops
+        <label
+          className={getDropZoneClassName()}
+          htmlFor="image-search-input"
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
@@ -193,6 +299,7 @@ export function SearchDemo() {
           <input
             accept="image/*"
             className="absolute inset-0 cursor-pointer opacity-0"
+            id="image-search-input"
             onChange={handleFileChange}
             type="file"
           />
@@ -201,7 +308,9 @@ export function SearchDemo() {
               <img
                 alt="Query preview"
                 className="h-40 w-40 rounded-xl object-cover shadow-md"
+                height={128}
                 src={preview}
+                width={128}
               />
               <span className="text-gray-400 text-sm">
                 Click or drag to change
@@ -220,17 +329,20 @@ export function SearchDemo() {
               </div>
             </div>
           )}
-        </div>
+        </label>
       )}
 
-      {/* Text Input (Text Mode) */}
       {searchMode === "text" && (
         <div className="flex flex-col gap-2">
-          <label className="font-medium text-gray-300 text-sm">
+          <label
+            className="font-medium text-gray-300 text-sm"
+            htmlFor="text-search-input"
+          >
             Describe what you're looking for
           </label>
           <input
             className="rounded-xl border border-gray-700 bg-gray-800 px-4 py-3 text-white placeholder-gray-500 shadow-sm transition-all focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/20"
+            id="text-search-input"
             onChange={(e) => {
               setTextQuery(e.target.value);
               setError(null);
@@ -247,14 +359,12 @@ export function SearchDemo() {
         </div>
       )}
 
-      {/* Error Message */}
-      {error && (
+      {error !== null && (
         <div className="rounded-xl border border-red-800 bg-red-900/20 px-4 py-3 text-red-400 text-sm">
           {error}
         </div>
       )}
 
-      {/* Search Button */}
       <button
         className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-3.5 font-semibold text-white shadow-indigo-500/25 shadow-lg transition-all hover:from-indigo-400 hover:to-purple-500 hover:shadow-indigo-500/30 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
         disabled={isLoading || !canSearch}
@@ -274,69 +384,7 @@ export function SearchDemo() {
         )}
       </button>
 
-      {/* Results */}
-      {hasSearched && (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-white">
-              {results.length > 0
-                ? `Found ${results.length} match${results.length !== 1 ? "es" : ""}`
-                : "No matches found"}
-            </h3>
-          </div>
-
-          {results.length > 0 && (
-            <div className="flex flex-col gap-3">
-              {results.map((result, index) => (
-                <div
-                  className="flex gap-4 rounded-xl border border-gray-700 bg-gray-800 p-4 transition-all hover:border-gray-600"
-                  key={result.product.id}
-                  style={{
-                    animationDelay: `${index * 50}ms`,
-                    animation: "fadeInUp 0.3s ease-out forwards",
-                  }}
-                >
-                  <img
-                    alt={result.product.name}
-                    className="h-20 w-20 flex-shrink-0 rounded-lg object-cover shadow-sm"
-                    src={result.product.imageBase64}
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="truncate font-medium text-white">
-                        {result.product.name}
-                      </h4>
-                      <span
-                        className={`flex-shrink-0 rounded-lg px-2.5 py-1 font-semibold text-xs ${getScoreStyles(result.score)}`}
-                      >
-                        {formatScore(result.score)}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-700">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
-                        style={{ width: `${result.score * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {results.length === 0 && (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-700 border-dashed bg-gray-800/30 px-6 py-12">
-              <Search className="mb-3 h-12 w-12 text-gray-600" />
-              <p className="font-medium text-gray-400">
-                No similar products found
-              </p>
-              <p className="text-gray-500 text-sm">
-                Try a different image or query
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      {hasSearched === true && <SearchResults results={results} />}
 
       <style>{`
         @keyframes fadeInUp {

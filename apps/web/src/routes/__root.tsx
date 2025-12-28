@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import type { trpc } from "@/utils/trpc";
 import "../index.css";
 
+// biome-ignore lint: Declaration merging requires interface
 export interface RouterAppContext {
   trpc: typeof trpc;
   queryClient: QueryClient;

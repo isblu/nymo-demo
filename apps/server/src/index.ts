@@ -4,10 +4,9 @@ import { appRouter } from "@Nymo/api/routers/index";
 import { cors } from "@elysiajs/cors";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { Elysia } from "elysia";
-import { visualSearchRoutes } from "./visual-search";
 import { startPythonServer } from "./visual-search/pythonProcess";
+import { visualSearchRoutes } from "./visual-search/routes";
 
-// Start Python embedding server, then Elysia
 (async () => {
   try {
     await startPythonServer();
@@ -20,7 +19,7 @@ import { startPythonServer } from "./visual-search/pythonProcess";
   const _app = new Elysia()
     .use(
       cors({
-        origin: true, // Allow all origins in development
+        origin: true,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type"],
         credentials: true,

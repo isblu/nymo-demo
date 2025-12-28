@@ -5,6 +5,7 @@
     "includes": [
       "**",
       "!**/.next",
+      "!**/.jina_env",
       "!**/dist",
       "!**/.turbo",
       "!**/dev-dist",

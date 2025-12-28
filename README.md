@@ -16,7 +16,7 @@ py -m venv .jina_env
 .\.jina_env\Scripts\Activate.ps1
 python.exe -m pip install --upgrade pip
 pip install torch --index-url https://download.pytorch.org/whl/cpu 
-pip install -r requirements. txt
+pip install -r requirements.txt
 cd ../../..
 ```
 

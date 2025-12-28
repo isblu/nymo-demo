@@ -18,7 +18,6 @@ model = None
 async def lifespan(app: FastAPI):
     global model
     
-    # Force offline mode
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     os.environ["HF_HUB_OFFLINE"] = "1"
     
@@ -46,7 +45,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Jina CLIP Embedding Server", lifespan=lifespan)
 
-# Enable CORS for the Elysia server
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -55,22 +53,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 class TextEmbedRequest(BaseModel):
     text: str
 
-
 class ImageEmbedRequest(BaseModel):
     imageBase64: str
-
 
 class EmbeddingResponse(BaseModel):
     embedding: list[float]
     dimensions: int
 
-
 def to_list(embedding) -> list[float]:
-    """Convert embedding to list, handling both torch tensors and numpy arrays."""
     if isinstance(embedding, torch.Tensor):
         return embedding.cpu().numpy().tolist()
     elif isinstance(embedding, np.ndarray):
@@ -78,16 +71,13 @@ def to_list(embedding) -> list[float]:
     else:
         return list(embedding)
 
-
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
     return {"status": "ok", "model_loaded": model is not None}
 
 
 @app.post("/embed/text", response_model=EmbeddingResponse)
 async def embed_text(request: TextEmbedRequest):
-    """Generate embedding for text."""
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
@@ -106,15 +96,12 @@ async def embed_text(request: TextEmbedRequest):
 
 @app.post("/embed/image", response_model=EmbeddingResponse)
 async def embed_image(request: ImageEmbedRequest):
-    """Generate embedding for base64 image."""
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     try:
-        # Decode base64 image
         image_data = request.imageBase64
         if image_data.startswith("data:"):
-            # Remove data URL prefix
             image_data = image_data.split(",", 1)[1]
 
         image_bytes = base64.b64decode(image_data)
