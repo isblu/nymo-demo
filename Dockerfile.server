@@ -1,0 +1,38 @@
+# Use Bun's official image
+FROM oven/bun:1 AS base
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json bun.lock ./
+COPY apps/server/package.json ./apps/server/
+COPY packages/api/package.json ./packages/api/
+COPY packages/config/package.json ./packages/config/
+RUN bun install --frozen-lockfile
+
+# Build stage
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Production stage
+FROM base AS runner
+WORKDIR /app
+
+# Copy necessary files
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/apps/server ./apps/server
+COPY --from=builder /app/package.json ./
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV USE_MODAL_EMBEDDINGS=true
+
+# Expose the port Cloud Run expects
+EXPOSE 8080
+
+# Run the server
+CMD ["bun", "run", "apps/server/src/index.ts"]

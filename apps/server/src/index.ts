@@ -1,4 +1,4 @@
-// import "dotenv/config";
+import "dotenv/config";
 import { createContext } from "@Nymo/api/context";
 import { appRouter } from "@Nymo/api/routers/index";
 import { cors } from "@elysiajs/cors";
@@ -8,12 +8,19 @@ import { startPythonServer } from "./visual-search/pythonProcess";
 import { visualSearchRoutes } from "./visual-search/routes";
 
 (async () => {
-  try {
-    await startPythonServer();
-    console.log("[Server] Python embedding server started");
-  } catch (error) {
-    console.error("[Server] Failed to start Python server:", error);
-    console.log("[Server] Continuing without embedding support...");
+  // Skip local Python server if using Modal.com for embeddings
+  const useModalEmbeddings = process.env.USE_MODAL_EMBEDDINGS === "true";
+
+  if (useModalEmbeddings) {
+    console.log("[Server] Using Modal.com for embeddings (cloud)");
+  } else {
+    try {
+      await startPythonServer();
+      console.log("[Server] Python embedding server started (local)");
+    } catch (error) {
+      console.error("[Server] Failed to start Python server:", error);
+      console.log("[Server] Continuing without embedding support...");
+    }
   }
 
   const _app = new Elysia()

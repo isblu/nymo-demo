@@ -1,5 +1,6 @@
 const PYTHON_EMBED_URL =
-  process.env.PYTHON_EMBED_URL || "http://localhost:8001";
+  process.env.PYTHON_EMBED_URL ||
+  "https://isblu--jina-clip-v2-fastapi-app.modal.run";
 
 type EmbeddingResponse = {
   embedding: number[];

@@ -1,0 +1,12 @@
+node_modules
+.git
+.gitignore
+*.md
+.env*
+!.env.example
+apps/web
+apps/server/python
+apps/server/data
+.turbo
+.vscode
+*.log
