@@ -5,25 +5,35 @@ A visual search demo application using **Jina CLIP v2** for image and text-based
 ## Features
 
 - 🖼️ **Visual Search**: Upload an image to find similar products
-- 📝 **Text Search**: Describe what you're looking for in natural language
+- 📝 **Text Search**: Describe what you're looking for in natural language  
 - 📤 **Vendor Upload**: Add products to the catalog with automatic embedding generation
 - 🧠 **AI-Powered**: Uses Jina CLIP v2 for multimodal embeddings
 
-## Quick Start (Cloud - Recommended)
+## Live Demo
 
-Use Modal.com for ML embeddings (no local Python/GPU required):
+| Service | URL |
+|---------|-----|
+| Frontend | [Vercel] |
+| Backend | https://nymo-backend-884619840600.us-central1.run.app |
+| ML API | https://isblu--jina-clip-v2-fastapi-app.modal.run |
+
+## Local Development
 
 ```bash
 git clone https://github.com/isblu/nymo-demo.git
 cd nymo-demo
-bun i
+bun install
 ```
 
 Create `apps/server/.env`:
 ```env
 PORT=3000
-USE_MODAL_EMBEDDINGS=true
-PYTHON_EMBED_URL=https://isblu--jina-clip-embeddings-fastapi-app.modal.run
+PYTHON_EMBED_URL=https://isblu--jina-clip-v2-fastapi-app.modal.run
+```
+
+Create `apps/web/.env`:
+```env
+VITE_SERVER_URL=http://localhost:3000
 ```
 
 Run:
@@ -31,72 +41,57 @@ Run:
 bun dev
 ```
 
-## Local Development (with Python)
-
-If you want to run the ML server locally:
-
-### 1. Install dependencies
-```bash
-git clone https://github.com/isblu/nymo-demo.git
-cd nymo-demo
-bun i
-```
-
-### 2. Setup Python Environment
-```bash
-cd apps/server/python
-py -m venv .jina_env
-.\.jina_env\Scripts\Activate.ps1  # Windows
-# source .jina_env/bin/activate   # Linux/Mac
-python.exe -m pip install --upgrade pip
-pip install torch --index-url https://download.pytorch.org/whl/cpu 
-pip install -r requirements.txt
-cd ../../..
-```
-
-### 3. Run (Local Mode)
-Create `apps/server/.env`:
-```env
-PORT=3000
-USE_MODAL_EMBEDDINGS=false
-PYTHON_EMBED_URL=http://localhost:8001
-```
-
-```bash
-bun dev
-```
-
-This starts both the web server and backend server (which spawns the local Python ML server).
-
-## Deploy to Modal.com
-
-To deploy your own Modal.com embedding endpoint:
-
-```bash
-cd apps/server/python
-pip install modal
-modal setup
-modal deploy modal_app.py
-```
-
-Your endpoint will be at: `https://YOUR_USERNAME--jina-clip-embeddings-fastapi-app.modal.run`
-
 ## Architecture
 
 ```
-Frontend (Vite + React)
-    ↓
-Backend (Bun + Elysia)
-    ↓
-ML Server (Python FastAPI + Jina CLIP v2)
-    - Local: apps/server/python/server.py
-    - Cloud: Modal.com (modal_app.py)
+┌─────────────────────────────────────────────────────────────────┐
+│                     PRODUCTION ARCHITECTURE                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐     ┌──────────────────┐     ┌──────────────┐ │
+│  │   Vercel     │────▶│ Google Cloud Run │────▶│   Modal.com  │ │
+│  │  (Frontend)  │     │    (Backend)     │     │   (ML API)   │ │
+│  │              │     │                  │     │              │ │
+│  │ React + Vite │     │  Bun + Elysia   │     │ Jina CLIP v2 │ │
+│  └──────────────┘     └──────────────────┘     └──────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Hosting Recommendations
+## Deployment
 
-| Component | Free Option | Paid Option |
-|-----------|-------------|-------------|
-| Frontend | Vercel, Cloudflare Pages | - |
-| Backend | Google Cloud Run, Railway | Railway Pro |
-| ML Server | Modal.com ($30 free credits) | Modal.com, Replicate | 
+### Backend (Google Cloud Run)
+
+```bash
+gcloud run deploy nymo-backend \
+  --source . \
+  --region us-central1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --set-env-vars "PYTHON_EMBED_URL=https://isblu--jina-clip-v2-fastapi-app.modal.run" \
+  --memory 512Mi \
+  --port 8080
+```
+
+### Frontend (Vercel)
+
+```bash
+vercel -e VITE_SERVER_URL=https://nymo-backend-884619840600.us-central1.run.app
+```
+
+### ML Server (Modal.com)
+
+The ML server is already deployed. To redeploy:
+
+```bash
+pip install modal
+modal setup
+modal deploy apps/server/python/modal_app.py
+```
+
+## Tech Stack
+
+- **Frontend**: React, Vite, TanStack Router, Tailwind CSS
+- **Backend**: Bun, Elysia, tRPC
+- **ML**: Jina CLIP v2, Modal.com
+- **Hosting**: Vercel, Google Cloud Run, Modal.com

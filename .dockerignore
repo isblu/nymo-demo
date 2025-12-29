@@ -1,12 +1,50 @@
+# Dependencies (will be installed fresh in Docker)
 node_modules
+**/node_modules
+
+# Git
 .git
 .gitignore
-*.md
-.env*
+.github
+
+# Environment files (set via Cloud Run env vars)
+.env
+.env.*
 !.env.example
+
+# Frontend (not needed for backend deployment)
 apps/web
+
+# Python ML server (using Modal.com instead)
 apps/server/python
 apps/server/data
+
+# Build artifacts
 .turbo
+dist
+.next
+out
+
+# IDE
 .vscode
+.idea
+*.swp
+*.swo
+
+# Logs
 *.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+__tests__
+
+# Documentation
+*.md
+!README.md
+docs

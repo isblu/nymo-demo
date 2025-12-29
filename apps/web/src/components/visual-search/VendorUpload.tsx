@@ -10,7 +10,11 @@ import {
   type ProductWithoutEmbedding,
 } from "@/lib/visual-search-config";
 
-export function VendorUpload() {
+type VendorUploadProps = {
+  onProductAdded?: () => void;
+};
+
+export function VendorUpload({ onProductAdded }: VendorUploadProps) {
   const [productName, setProductName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -115,6 +119,7 @@ export function VendorUpload() {
     setSelectedFile(null);
     setPreview(null);
     await fetchProducts();
+    onProductAdded?.(); // Notify parent to refresh health/product count
     setIsLoading(false);
 
     setTimeout(() => setSuccess(null), 3000);

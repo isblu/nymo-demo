@@ -59,17 +59,30 @@ export async function embedImage(imageBase64: string): Promise<number[]> {
   }
 }
 
+// Cache for health check to avoid excessive Modal calls
+let healthCache: { status: boolean; timestamp: number } | null = null;
+const HEALTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export async function checkEmbeddingsHealth(): Promise<boolean> {
+  // Return cached result if still valid
+  if (healthCache && Date.now() - healthCache.timestamp < HEALTH_CACHE_TTL) {
+    return healthCache.status;
+  }
+
   try {
     const response = await fetch(`${PYTHON_EMBED_URL}/health`, {
       method: "GET",
     });
     if (response.ok) {
       const data = await response.json();
-      return data.model_loaded === true;
+      const status = data.model_loaded === true;
+      healthCache = { status, timestamp: Date.now() };
+      return status;
     }
+    healthCache = { status: false, timestamp: Date.now() };
     return false;
   } catch {
+    healthCache = { status: false, timestamp: Date.now() };
     return false;
   }
 }

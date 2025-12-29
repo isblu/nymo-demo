@@ -1,0 +1,44 @@
+# Dependencies (Vercel installs fresh)
+node_modules
+**/node_modules
+
+# Jina CLIP model (huge!)
+apps/server/python
+apps/server/data
+
+# Python environments
+**/.jina_env
+**/venv
+**/.venv
+**/__pycache__
+
+# Git
+.git
+.github
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+.turbo
+dist
+.next
+out
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+Dockerfile
+.dockerignore
+.gcloudignore

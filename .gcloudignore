@@ -1,0 +1,58 @@
+# This file specifies files that should not be uploaded to Cloud Build
+# Similar to .gitignore syntax
+
+# Jina CLIP model (HUGE - 2GB+) - we use Modal.com instead
+apps/server/python/
+
+# Python virtual environments
+**/.jina_env/
+**/venv/
+**/.venv/
+**/__pycache__/
+
+# Node modules (will be installed fresh in Docker)
+node_modules/
+**/node_modules/
+
+# Git
+.git/
+.github/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Frontend (not needed for backend)
+apps/web/
+
+# Data files
+apps/server/data/
+
+# Build artifacts
+.turbo/
+dist/
+.next/
+out/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+__tests__/
+
+# Bun lock (will use package.json)
+# bun.lock  # Actually keep this for reproducible builds

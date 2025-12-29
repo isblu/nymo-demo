@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import logoImage from "@/assets/favicon.png";
 import { SearchDemo } from "@/components/visual-search/SearchDemo";
 import { VendorUpload } from "@/components/visual-search/VendorUpload";
@@ -20,71 +20,30 @@ type HealthStatus = {
 function VisualSearchPage() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const response = await fetch(API_ENDPOINTS.health);
-        if (response.ok) {
-          const data = await response.json();
-          setHealth(data);
-          setIsConnected(true);
-        } else {
-          setIsConnected(false);
-          setHealth(null);
-        }
-      } catch {
-        setIsConnected(false);
-        setHealth(null);
+  const checkHealth = useCallback(async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.health);
+      if (response.ok) {
+        const data = await response.json();
+        setHealth(data);
+        setIsConnected(true);
+        return true;
       }
-    };
-
-    const startPolling = (intervalMs: number) => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      intervalRef.current = setInterval(checkHealth, intervalMs);
-    };
-
-    checkHealth();
-    startPolling(3000);
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
+      setIsConnected(false);
+      setHealth(null);
+      return false;
+    } catch {
+      setIsConnected(false);
+      setHealth(null);
+      return false;
+    }
   }, []);
 
+  // Only check health once on page load
   useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    const intervalMs = isConnected ? 10_000 : 3000;
-    intervalRef.current = setInterval(async () => {
-      try {
-        const response = await fetch(API_ENDPOINTS.health);
-        if (response.ok) {
-          const data = await response.json();
-          setHealth(data);
-          setIsConnected(true);
-        } else {
-          setIsConnected(false);
-          setHealth(null);
-        }
-      } catch {
-        setIsConnected(false);
-        setHealth(null);
-      }
-    }, intervalMs);
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isConnected]);
+    checkHealth();
+  }, [checkHealth]);
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -109,12 +68,15 @@ function VisualSearchPage() {
               </div>
             </div>
 
-            <div
-              className={`flex items-center gap-2 rounded-full px-4 py-2 font-medium text-sm transition-all ${
+            <button
+              className={`flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 font-medium text-sm transition-all hover:opacity-80 ${
                 isConnected
                   ? "bg-emerald-900/30 text-emerald-400"
                   : "bg-red-900/30 text-red-400"
               }`}
+              onClick={checkHealth}
+              title="Click to refresh status"
+              type="button"
             >
               {isConnected ? (
                 <>
@@ -126,9 +88,9 @@ function VisualSearchPage() {
                   ) : null}
                 </>
               ) : (
-                <span>Disconnected</span>
+                <span>Disconnected - Click to retry</span>
               )}
-            </div>
+            </button>
           </div>
         </div>
       </header>
@@ -136,7 +98,7 @@ function VisualSearchPage() {
       <main className="container mx-auto max-w-7xl px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="rounded-3xl border border-gray-800 bg-gray-900 p-6 shadow-xl">
-            <VendorUpload />
+            <VendorUpload onProductAdded={checkHealth} />
           </div>
 
           <div className="rounded-3xl border border-gray-800 bg-gray-900 p-6 shadow-xl">
