@@ -39,7 +39,9 @@ function main() {
   return app;
 }
 
-main().catch((error) => {
+try {
+  main();
+} catch (error) {
   console.error("[Server] Fatal error:", error);
   process.exit(1);
-});
+}
