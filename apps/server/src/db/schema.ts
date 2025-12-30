@@ -18,3 +18,6 @@ export const posts = pgTable('posts', {
   authorId: uuid('author_id').references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+// Export auth schema for better-auth
+export * from './auth-schema';

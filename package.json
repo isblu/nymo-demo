@@ -27,6 +27,7 @@
     "dev:server": "turbo -F server dev"
   },
   "dependencies": {
+    "better-auth": "^1.4.9",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },

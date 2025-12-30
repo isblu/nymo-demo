@@ -6,6 +6,7 @@ import { Elysia } from "elysia";
 import { visualSearchRoutes } from "./visual-search/routes";
 import { db } from "./db";
 import { users } from "./db/schema";
+import { auth } from "./auth";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -25,6 +26,10 @@ function main() {
       })
     )
     .use(visualSearchRoutes)
+    // Better Auth routes
+    .all("/api/auth/*", async (context) => {
+      return auth.handler(context.request);
+    })
     .all("/trpc/*", async (context) => {
       const res = await fetchRequestHandler({
         endpoint: "/trpc",
