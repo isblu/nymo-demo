@@ -16,13 +16,16 @@
     "@sinclair/typebox": "^0.34.41",
     "@trpc/server": "catalog:",
     "dotenv": "catalog:",
+    "drizzle-orm": "^0.45.1",
     "elysia": "catalog:",
+    "postgres": "^3.4.7",
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
+    "@Nymo/config": "workspace:*",
     "@types/bun": "^1.2.6",
+    "drizzle-kit": "^0.31.8",
     "tsdown": "^0.16.5",
-    "@Nymo/config": "workspace:*"
+    "typescript": "^5.8.2"
   }
 }
