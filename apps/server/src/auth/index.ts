@@ -24,6 +24,8 @@ const schema = {
   accountRelations,
 };
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -38,14 +40,17 @@ export const auth = betterAuth({
   trustedOrigins: [
     process.env.FRONTEND_URL || "http://localhost:3001",
     "http://localhost:3001",
+    "https://nymo-demo.vercel.app",
+    /https:\/\/nymo-demo.*\.vercel\.app/,
   ],
   advanced: {
     crossSubDomainCookies: {
       enabled: false,
     },
     defaultCookieAttributes: {
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      // For cross-origin cookies: SameSite=None requires Secure=true
+      sameSite: isProduction ? "none" : "lax",
+      secure: isProduction,
       httpOnly: true,
       path: "/",
     },
