@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { Loader2, Lock, LogIn, Mail } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -15,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { signIn } from "@/lib/auth-client";
 
 export function SignInForm() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +34,7 @@ export function SignInForm() {
       }
 
       toast.success("Welcome back!");
-      navigate({ to: "/" });
+      window.location.href = "/";
     } catch {
       toast.error("An unexpected error occurred");
     } finally {
