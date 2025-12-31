@@ -79,6 +79,10 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars "PYTHON_EMBED_URL=${{ secrets.PYTHON_EMBED_URL }}" \
+            --set-env-vars "BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }}" \
+            --set-env-vars "BETTER_AUTH_URL=${{ secrets.BETTER_AUTH_URL }}" \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-env-vars "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" \
             --memory 512Mi \
             --port 8080 \
             --format='value(status.url)' > service_url.txt
