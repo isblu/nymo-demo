@@ -24,6 +24,13 @@ env:
   PROJECT_ID: nymo-69420
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev
+  
+  # Production URLs
+  PROD_BACKEND_URL: https://nymo-backend-884619840600.us-central1.run.app
+  PROD_FRONTEND_URL: https://nymo-demo.vercel.app
+  
+  # Preview URLs (will be updated dynamically for preview deployments)
+  PREVIEW_FRONTEND_URL: https://nymo-demo-git-preview.vercel.app
 
 jobs:
   deploy:
@@ -44,9 +51,14 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "SERVICE_NAME=nymo-backend" >> $GITHUB_OUTPUT
             echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+            echo "BETTER_AUTH_URL=${{ env.PROD_BACKEND_URL }}" >> $GITHUB_OUTPUT
+            echo "FRONTEND_URL=${{ env.PROD_FRONTEND_URL }}" >> $GITHUB_OUTPUT
           else
             echo "SERVICE_NAME=nymo-backend-preview" >> $GITHUB_OUTPUT
             echo "ENVIRONMENT=preview" >> $GITHUB_OUTPUT
+            # Preview URLs - backend URL will be set after deployment
+            echo "BETTER_AUTH_URL=https://nymo-backend-preview-884619840600.us-central1.run.app" >> $GITHUB_OUTPUT
+            echo "FRONTEND_URL=${{ env.PREVIEW_FRONTEND_URL }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Authenticate to Google Cloud
@@ -78,7 +90,12 @@ jobs:
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "PYTHON_EMBED_URL=${{ secrets.PYTHON_EMBED_URL }}" \
+            --set-env-vars "\
+              PYTHON_EMBED_URL=${{ secrets.PYTHON_EMBED_URL }},\
+              DATABASE_URL=${{ secrets.DATABASE_URL }},\
+              BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }},\
+              BETTER_AUTH_URL=${{ steps.set-env.outputs.BETTER_AUTH_URL }},\
+              FRONTEND_URL=${{ steps.set-env.outputs.FRONTEND_URL }}" \
             --memory 512Mi \
             --port 8080 \
             --format='value(status.url)' > service_url.txt
@@ -96,7 +113,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🚀 Backend Preview Deployed!\n\n**URL:** ${{ steps.deploy.outputs.SERVICE_URL }}\n**Environment:** Preview\n**Commit:** \`${{ github.sha }}\``
+              body: `## 🚀 Backend Preview Deployed!\n\n**URL:** ${{ steps.deploy.outputs.SERVICE_URL }}\n**Environment:** Preview\n**Commit:** \`${{ github.sha }}\`\n\n**Environment Variables:**\n- BETTER_AUTH_URL: \`${{ steps.set-env.outputs.BETTER_AUTH_URL }}\`\n- FRONTEND_URL: \`${{ steps.set-env.outputs.FRONTEND_URL }}\``
             })
 
       - name: Output deployment info
@@ -108,4 +125,6 @@ jobs:
           echo "| Environment | ${{ steps.set-env.outputs.ENVIRONMENT }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Service | ${{ steps.set-env.outputs.SERVICE_NAME }} |" >> $GITHUB_STEP_SUMMARY
           echo "| URL | ${{ steps.deploy.outputs.SERVICE_URL }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| BETTER_AUTH_URL | ${{ steps.set-env.outputs.BETTER_AUTH_URL }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| FRONTEND_URL | ${{ steps.set-env.outputs.FRONTEND_URL }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY

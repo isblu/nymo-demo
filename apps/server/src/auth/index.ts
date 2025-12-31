@@ -26,7 +26,7 @@ const schema = {
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: "pg", // Supabase is Postgres
+    provider: "pg",
     schema,
   }),
   emailAndPassword: {
