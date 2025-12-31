@@ -3,10 +3,9 @@ import { appRouter } from "@Nymo/api/routers/index";
 import { cors } from "@elysiajs/cors";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { Elysia } from "elysia";
-import { visualSearchRoutes } from "./visual-search/routes";
-import { db } from "./db";
-import { users } from "./db/schema";
 import { auth } from "./auth";
+import { db } from "./db";
+import { visualSearchRoutes } from "./visual-search/routes";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -27,9 +26,7 @@ function main() {
     )
     .use(visualSearchRoutes)
     // Better Auth routes
-    .all("/api/auth/*", async (context) => {
-      return auth.handler(context.request);
-    })
+    .all("/api/auth/*", async (context) => auth.handler(context.request))
     .all("/trpc/*", async (context) => {
       const res = await fetchRequestHandler({
         endpoint: "/trpc",
@@ -40,10 +37,6 @@ function main() {
       return res;
     })
     .get("/", () => "OK")
-    // Test route to verify database connection
-    .get("/users", async ({ db }) => {
-      return await db.select().from(users);
-    })
     .listen(PORT);
 
   console.log(`[Server] Server is running on http://0.0.0.0:${PORT}`);

@@ -59,12 +59,10 @@ export async function embedImage(imageBase64: string): Promise<number[]> {
   }
 }
 
-// Cache for health check to avoid excessive Modal calls
 let healthCache: { status: boolean; timestamp: number } | null = null;
-const HEALTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const HEALTH_CACHE_TTL = 5 * 60 * 1000;
 
 export async function checkEmbeddingsHealth(): Promise<boolean> {
-  // Return cached result if still valid
   if (healthCache && Date.now() - healthCache.timestamp < HEALTH_CACHE_TTL) {
     return healthCache.status;
   }

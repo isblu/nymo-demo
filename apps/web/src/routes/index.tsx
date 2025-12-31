@@ -1,11 +1,20 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import logoImage from "@/assets/favicon.png";
-import { SearchDemo } from "@/components/visual-search/SearchDemo";
-import { VendorUpload } from "@/components/visual-search/VendorUpload";
+import { UserMenu } from "@/components/auth/user-menu";
+import { SearchDemo } from "@/components/visual-search/search-demo";
+import { VendorUpload } from "@/components/visual-search/vendor-upload";
+import { getSession } from "@/lib/auth-client";
 import { API_ENDPOINTS } from "@/lib/visual-search-config";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: async () => {
+    // Redirect to login if not authenticated
+    const session = await getSession();
+    if (!session.data?.user) {
+      throw redirect({ to: "/login" });
+    }
+  },
   component: VisualSearchPage,
 });
 
@@ -68,29 +77,32 @@ function VisualSearchPage() {
               </div>
             </div>
 
-            <button
-              className={`flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 font-medium text-sm transition-all hover:opacity-80 ${
-                isConnected
-                  ? "bg-emerald-900/30 text-emerald-400"
-                  : "bg-red-900/30 text-red-400"
-              }`}
-              onClick={checkHealth}
-              title="Click to refresh status"
-              type="button"
-            >
-              {isConnected ? (
-                <>
-                  <span>Connected</span>
-                  {health !== null ? (
-                    <span className="ml-1 opacity-70">
-                      • {health.productCount} products
-                    </span>
-                  ) : null}
-                </>
-              ) : (
-                <span>Disconnected - Click to retry</span>
-              )}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                className={`flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 font-medium text-sm transition-all hover:opacity-80 ${
+                  isConnected
+                    ? "bg-emerald-900/30 text-emerald-400"
+                    : "bg-red-900/30 text-red-400"
+                }`}
+                onClick={checkHealth}
+                title="Click to refresh status"
+                type="button"
+              >
+                {isConnected ? (
+                  <>
+                    <span>Connected</span>
+                    {health !== null ? (
+                      <span className="ml-1 opacity-70">
+                        • {health.productCount} products
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span>Disconnected - Click to retry</span>
+                )}
+              </button>
+              <UserMenu />
+            </div>
           </div>
         </div>
       </header>
