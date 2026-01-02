@@ -9,12 +9,16 @@ import { API_ENDPOINTS } from "@/lib/visual-search-config";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
-    // Redirect to login if not authenticated
     const session = await getSession();
     if (!session.data?.user) {
       throw redirect({ to: "/login" });
     }
   },
+  pendingComponent: () => (
+    <div className="flex min-h-screen items-center justify-center bg-gray-950">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-700 border-t-indigo-500" />
+    </div>
+  ),
   component: VisualSearchPage,
 });
 
@@ -49,7 +53,6 @@ function VisualSearchPage() {
     }
   }, []);
 
-  // Only check health once on page load
   useEffect(() => {
     checkHealth();
   }, [checkHealth]);
@@ -101,7 +104,7 @@ function VisualSearchPage() {
                   <span>Disconnected - Click to retry</span>
                 )}
               </button>
-              <UserMenu />
+              <UserMenu requiresAuth />
             </div>
           </div>
         </div>

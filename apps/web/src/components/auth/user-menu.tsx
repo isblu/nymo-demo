@@ -12,14 +12,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth-client";
 
-export function UserMenu() {
+type UserMenuProps = {
+  requiresAuth?: boolean;
+};
+
+export function UserMenu({ requiresAuth = false }: UserMenuProps) {
   const { data: session, isPending } = useSession();
 
   async function handleSignOut() {
     try {
       await signOut();
       toast.success("Signed out successfully");
-      // Force a full page reload to clear all client-side state
       window.location.href = "/login";
     } catch {
       toast.error("Failed to sign out");
@@ -31,6 +34,9 @@ export function UserMenu() {
   }
 
   if (!session?.user) {
+    if (requiresAuth) {
+      return <div className="h-9 w-9 animate-pulse rounded-full bg-gray-700" />;
+    }
     return (
       <Button
         asChild
