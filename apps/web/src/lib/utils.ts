@@ -10,12 +10,10 @@ export function cn(...inputs: ClassValue[]) {
  * Redirects are thrown objects with at least a 'to' property
  */
 export function isRedirectError(error: unknown): boolean {
-  return (
-    error !== null &&
-    typeof error === "object" &&
-    "to" in error &&
-    (typeof (error as { to?: unknown }).to === "string" ||
-      (typeof (error as { to?: unknown }).to === "object" &&
-        (error as { to?: unknown }).to !== null))
-  );
+  if (error === null || typeof error !== "object" || !("to" in error)) {
+    return false;
+  }
+
+  const { to } = error as { to?: unknown };
+  return typeof to === "string" || (to !== null && typeof to === "object");
 }
