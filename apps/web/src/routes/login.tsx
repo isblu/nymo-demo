@@ -5,9 +5,17 @@ import { getSession } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
-    const session = await getSession();
-    if (session.data?.user) {
-      throw redirect({ to: "/" });
+    try {
+      const session = await getSession();
+      if (session.data?.user) {
+        throw redirect({ to: "/" });
+      }
+    } catch (error) {
+      // If it's a redirect, rethrow it
+      if (error && typeof error === "object" && "to" in error) {
+        throw error;
+      }
+      // If session check fails (e.g., network error), allow login page to load
     }
   },
   component: LoginPage,

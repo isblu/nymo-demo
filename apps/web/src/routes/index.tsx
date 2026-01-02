@@ -9,8 +9,17 @@ import { API_ENDPOINTS } from "@/lib/visual-search-config";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
-    const session = await getSession();
-    if (!session.data?.user) {
+    try {
+      const session = await getSession();
+      if (!session.data?.user) {
+        throw redirect({ to: "/login" });
+      }
+    } catch (error) {
+      // If it's a redirect, rethrow it
+      if (error && typeof error === "object" && "to" in error) {
+        throw error;
+      }
+      // For other errors (network issues, etc.), redirect to login
       throw redirect({ to: "/login" });
     }
   },
