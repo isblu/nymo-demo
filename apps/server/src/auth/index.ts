@@ -38,17 +38,18 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins: [
-    process.env.FRONTEND_URL || "http://localhost:3001",
     "http://localhost:3001",
+    "http://localhost:3000",
     "https://nymo-demo.vercel.app",
-    /https:\/\/nymo-demo.*\.vercel\.app/,
-  ],
+    "https://nymo-demo-lison-mendis-projects.vercel.app",
+    "https://nymo-demo-git-auth-lison-mendis-projects.vercel.app",
+    process.env.FRONTEND_URL || "",
+  ].filter(Boolean),
   advanced: {
     crossSubDomainCookies: {
       enabled: false,
     },
     defaultCookieAttributes: {
-      // For cross-origin cookies: SameSite=None requires Secure=true
       sameSite: isProduction ? "none" : "lax",
       secure: isProduction,
       httpOnly: true,
