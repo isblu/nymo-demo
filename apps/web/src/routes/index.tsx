@@ -5,12 +5,22 @@ import { UserMenu } from "@/components/auth/user-menu";
 import { SearchDemo } from "@/components/visual-search/search-demo";
 import { VendorUpload } from "@/components/visual-search/vendor-upload";
 import { getSession } from "@/lib/auth-client";
+import { isRedirectError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/visual-search-config";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
-    const session = await getSession();
-    if (!session.data?.user) {
+    try {
+      const session = await getSession();
+      if (!session.data?.user) {
+        throw redirect({ to: "/login" });
+      }
+    } catch (error) {
+      // If it's a redirect, rethrow it
+      if (isRedirectError(error)) {
+        throw error;
+      }
+      // For other errors (network issues, etc.), redirect to login
       throw redirect({ to: "/login" });
     }
   },

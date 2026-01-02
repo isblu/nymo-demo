@@ -2,12 +2,21 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import logoImage from "@/assets/favicon.png";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { getSession } from "@/lib/auth-client";
+import { isRedirectError } from "@/lib/utils";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
-    const session = await getSession();
-    if (session.data?.user) {
-      throw redirect({ to: "/" });
+    try {
+      const session = await getSession();
+      if (session.data?.user) {
+        throw redirect({ to: "/" });
+      }
+    } catch (error) {
+      // If it's a redirect, rethrow it
+      if (isRedirectError(error)) {
+        throw error;
+      }
+      // If session check fails (e.g., network error), allow login page to load
     }
   },
   component: LoginPage,
