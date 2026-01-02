@@ -5,6 +5,7 @@ import { UserMenu } from "@/components/auth/user-menu";
 import { SearchDemo } from "@/components/visual-search/search-demo";
 import { VendorUpload } from "@/components/visual-search/vendor-upload";
 import { getSession } from "@/lib/auth-client";
+import { isRedirectError } from "@/lib/utils";
 import { API_ENDPOINTS } from "@/lib/visual-search-config";
 
 export const Route = createFileRoute("/")({
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/")({
       }
     } catch (error) {
       // If it's a redirect, rethrow it
-      if (error && typeof error === "object" && "to" in error) {
+      if (isRedirectError(error)) {
         throw error;
       }
       // For other errors (network issues, etc.), redirect to login
