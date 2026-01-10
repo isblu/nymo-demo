@@ -2,13 +2,21 @@
  * Script to create demo users for the Nymo Visual Search internal tool.
  * Since self-registration is disabled, this script is used to create predefined users.
  *
- * Usage:
- *   bun run src/scripts/create-user.ts --email="user@example.com" --password="SecurePass123" --name="Demo User"
+ * Usage (run from backend folder):
+ *   from root folder:
+ *   bun run backend/src/scripts/create-user.ts --email="user@example.com" --password="SecurePass123" --name="Demo User"
  *
  * Or programmatically:
  *   import { createUser } from './create-user';
  *   await createUser('user@example.com', 'password', 'User Name');
  */
+
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// Load .env file from backend folder (handles running from root or backend dir)
+const backendDir = resolve(import.meta.dir, "../..");
+config({ path: resolve(backendDir, ".env") });
 
 import { auth } from "../auth";
 

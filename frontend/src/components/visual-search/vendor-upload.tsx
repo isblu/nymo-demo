@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Clock, Package, Plus, RefreshCw, Upload } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type AddProductResponse,
   API_ENDPOINTS,
@@ -24,6 +24,7 @@ export function VendorUpload({ onProductAdded }: VendorUploadProps) {
   const [allProducts, setAllProducts] = useState<ProductWithoutEmbedding[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchProducts = useCallback(async () => {
     setIsLoadingProducts(true);
@@ -183,7 +184,7 @@ export function VendorUpload({ onProductAdded }: VendorUploadProps) {
               }
               return `${baseClasses} border-gray-700 bg-gray-800/50 hover:border-orange-500/50 hover:bg-orange-900/10`;
             })()}
-            onClick={() => document.getElementById("productImage")?.click()}
+            onClick={() => fileInputRef.current?.click()}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
@@ -191,9 +192,12 @@ export function VendorUpload({ onProductAdded }: VendorUploadProps) {
           >
             <input
               accept="image/*"
-              className="absolute inset-0 cursor-pointer opacity-0"
+              aria-hidden="true"
+              className="hidden"
               id="productImage"
               onChange={handleFileChange}
+              ref={fileInputRef}
+              tabIndex={-1}
               type="file"
             />
             {preview ? (
