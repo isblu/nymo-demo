@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { LogIn, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,15 @@ type UserMenuProps = {
 
 export function UserMenu({ requiresAuth = false }: UserMenuProps) {
   const { data: session, isPending } = useSession();
+  const router = useRouter();
+  const navigate = useNavigate();
 
   async function handleSignOut() {
     try {
       await signOut();
       toast.success("Signed out successfully");
-      window.location.href = "/login";
+      await router.invalidate();
+      await navigate({ to: "/login" });
     } catch {
       toast.error("Failed to sign out");
     }

@@ -1,3 +1,4 @@
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { Loader2, Lock, LogIn, Mail } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,29 +18,35 @@ export function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
 
+    let result;
     try {
-      const result = await signIn.email({
+      result = await signIn.email({
         email,
         password,
       });
-
-      if (result.error) {
-        toast.error(result.error.message ?? "Failed to sign in");
-        return;
-      }
-
-      toast.success("Welcome back!");
-      window.location.href = "/";
     } catch {
       toast.error("An unexpected error occurred");
-    } finally {
       setIsLoading(false);
+      return;
     }
+
+    if (result?.error) {
+      toast.error(result.error.message ?? "Failed to sign in");
+      setIsLoading(false);
+      return;
+    }
+
+    toast.success("Welcome back!");
+    setIsLoading(false);
+    await router.invalidate();
+    await navigate({ to: "/" });
   }
 
   return (
