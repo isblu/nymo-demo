@@ -1,14 +1,14 @@
-import { createContext } from "./api/context";
-import { appRouter } from "./api/routers";
 import { cors } from "@elysiajs/cors";
-import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { Elysia } from "elysia";
-import { auth } from "./auth";
-import { db } from "./db";
-import { visualSearchRoutes } from "./visual-search/routes";
+
+// Lazy imports to avoid circular dependency issues at module load time
+let visualSearchRoutes: Elysia | null = null;
+let auth: { handler: (req: Request) => Promise<Response> } | null = null;
+let appRouter: unknown = null;
+let createContext: (opts: { context: unknown }) => unknown = () => ({});
+let db: unknown = null;
 
 const app = new Elysia()
-  .decorate("db", db)
   .use(
     cors({
       origin: true,
@@ -26,19 +26,68 @@ const app = new Elysia()
       message: error instanceof Error ? error.message : "Unknown error",
     };
   })
-  .use(visualSearchRoutes)
-  // Better Auth routes
-  .all("/api/auth/*", async (context) => auth.handler(context.request))
-  .all("/trpc/*", async (context) => {
-    const res = await fetchRequestHandler({
-      endpoint: "/trpc",
-      router: appRouter,
-      req: context.request,
-      createContext: () => createContext({ context }),
+  .get("/", () => "OK")
+  .get("/health", () => ({ status: "ok", timestamp: new Date().toISOString() }));
+
+// Dynamically load and register routes after app is created
+async function initializeRoutes() {
+  try {
+    // Import modules dynamically to avoid circular deps
+    const [vsModule, authModule, routersModule, contextModule, dbModule] = await Promise.all([
+      import("./visual-search/routes"),
+      import("./auth"),
+      import("./api/routers"),
+      import("./api/context"),
+      import("./db"),
+    ]);
+
+    visualSearchRoutes = vsModule.visualSearchRoutes;
+    auth = authModule.auth;
+    appRouter = routersModule.appRouter;
+    createContext = contextModule.createContext;
+    db = dbModule.db;
+
+    // Register visual search routes
+    if (visualSearchRoutes) {
+      app.use(visualSearchRoutes);
+    }
+
+    // Register auth routes
+    app.all("/api/auth/*", async (context) => {
+      if (!auth) {
+        return { error: "Auth not initialized" };
+      }
+      return auth.handler(context.request);
     });
-    return res;
-  })
-  .get("/", () => "OK");
+
+    // Register tRPC routes
+    app.all("/trpc/*", async (context) => {
+      if (!appRouter) {
+        return { error: "tRPC not initialized" };
+      }
+      const { fetchRequestHandler } = await import("@trpc/server/adapters/fetch");
+      const res = await fetchRequestHandler({
+        endpoint: "/trpc",
+        router: appRouter as Parameters<typeof fetchRequestHandler>[0]["router"],
+        req: context.request,
+        createContext: () => createContext({ context }),
+      });
+      return res;
+    });
+
+    // Decorate with db
+    if (db) {
+      app.decorate("db", db);
+    }
+
+    console.log("[Server] Routes initialized successfully");
+  } catch (error) {
+    console.error("[Server] Failed to initialize routes:", error);
+  }
+}
+
+// Initialize routes (non-blocking)
+initializeRoutes();
 
 // For Vercel serverless - export the app's fetch handler
 export default app;
