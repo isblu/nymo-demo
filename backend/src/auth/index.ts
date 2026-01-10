@@ -43,7 +43,7 @@ export const auth = betterAuth({
     "https://nymo-demo.vercel.app",
     "https://nymo-demo-lison-mendis-projects.vercel.app",
     "https://nymo-demo-git-auth-lison-mendis-projects.vercel.app",
-    "https://demo.nymo.lk/",
+    "https://demo.nymo.lk",
     process.env.FRONTEND_URL || "",
   ].filter(Boolean),
   advanced: {
