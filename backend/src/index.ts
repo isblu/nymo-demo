@@ -1,5 +1,5 @@
-import { createContext } from "@/api/context";
-import { appRouter } from "@/api/routers";
+import { createContext } from "./api/context";
+import { appRouter } from "./api/routers";
 import { cors } from "@elysiajs/cors";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { Elysia } from "elysia";
