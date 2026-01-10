@@ -24,10 +24,10 @@ const schema = {
   accountRelations,
 };
 
-// Lazy initialization to avoid crashing when DATABASE_URL is not set
+// Lazy initialization - only connect when actually used
 let _db: ReturnType<typeof drizzle> | null = null;
 
-function getDb() {
+export function getDb() {
   if (!_db) {
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
@@ -39,14 +39,25 @@ function getDb() {
   return _db;
 }
 
-// Export a proxy that lazily initializes the db
-export const db = new Proxy({} as ReturnType<typeof drizzle>, {
-  get(_target, prop) {
-    const realDb = getDb();
-    const value = realDb[prop as keyof typeof realDb];
-    if (typeof value === "function") {
-      return value.bind(realDb);
-    }
-    return value;
+// For backwards compatibility - but prefer using getDb() for lazy initialization
+// This will throw at runtime if DATABASE_URL is not set when first accessed
+export const db = {
+  get query() {
+    return getDb().query;
   },
-});
+  get select() {
+    return getDb().select.bind(getDb());
+  },
+  get insert() {
+    return getDb().insert.bind(getDb());
+  },
+  get update() {
+    return getDb().update.bind(getDb());
+  },
+  get delete() {
+    return getDb().delete.bind(getDb());
+  },
+  get execute() {
+    return getDb().execute.bind(getDb());
+  },
+};
