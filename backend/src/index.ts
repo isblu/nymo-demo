@@ -18,6 +18,14 @@ const app = new Elysia()
       exposeHeaders: ["Set-Cookie"],
     })
   )
+  .onError(({ error, set }) => {
+    console.error("[Server Error]", error);
+    set.status = 500;
+    return {
+      error: "Internal Server Error",
+      message: error instanceof Error ? error.message : "Unknown error",
+    };
+  })
   .use(visualSearchRoutes)
   // Better Auth routes
   .all("/api/auth/*", async (context) => auth.handler(context.request))
@@ -32,4 +40,12 @@ const app = new Elysia()
   })
   .get("/", () => "OK");
 
+// For Vercel serverless - export the app's fetch handler
 export default app;
+
+// For local development with bun run
+if (typeof Bun !== "undefined" && !process.env.VERCEL) {
+  const port = process.env.PORT || 3000;
+  app.listen(port);
+  console.log(`Server running at http://localhost:${port}`);
+}
