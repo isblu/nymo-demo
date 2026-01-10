@@ -3,32 +3,32 @@ name: Deploy Backend to Cloud Run
 on:
   push:
     branches:
-      - '**'  # All branches
+      - "**" # All branches
     paths:
-      - 'apps/server/**'
-      - 'packages/**'
-      - 'Dockerfile'
-      - 'package.json'
-      - 'bun.lock'
+      - "apps/server/**"
+      - "packages/**"
+      - "Dockerfile"
+      - "package.json"
+      - "bun.lock"
   pull_request:
     branches:
       - main
     paths:
-      - 'apps/server/**'
-      - 'packages/**'
-      - 'Dockerfile'
-      - 'package.json'
-      - 'bun.lock'
+      - "apps/server/**"
+      - "packages/**"
+      - "Dockerfile"
+      - "package.json"
+      - "bun.lock"
 
 env:
   PROJECT_ID: nymo-69420
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev
-  
+
   # Production URLs
   PROD_BACKEND_URL: https://nymo-backend-884619840600.us-central1.run.app
   PROD_FRONTEND_URL: https://nymo-demo.vercel.app
-  
+
   # Preview URLs (will be updated dynamically for preview deployments)
   PREVIEW_FRONTEND_URL: https://nymo-demo-git-preview.vercel.app
 
@@ -90,16 +90,11 @@ jobs:
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "\
-              PYTHON_EMBED_URL=${{ secrets.PYTHON_EMBED_URL }},\
-              DATABASE_URL=${{ secrets.DATABASE_URL }},\
-              BETTER_AUTH_SECRET=${{ secrets.BETTER_AUTH_SECRET }},\
-              BETTER_AUTH_URL=${{ steps.set-env.outputs.BETTER_AUTH_URL }},\
-              FRONTEND_URL=${{ steps.set-env.outputs.FRONTEND_URL }}" \
+            --set-env-vars "PYTHON_EMBED_URL=${{ secrets.PYTHON_EMBED_URL }}" \
             --memory 512Mi \
             --port 8080 \
             --format='value(status.url)' > service_url.txt
-          
+
           SERVICE_URL=$(cat service_url.txt)
           echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $SERVICE_URL"
