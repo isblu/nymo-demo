@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock, Package, Plus, RefreshCw, Upload } from "lucide-react";
+import { Check, Clock, Package, Plus, RefreshCw, Trash2, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type AddProductResponse,
@@ -24,6 +24,7 @@ export function VendorUpload({ onProductAdded }: VendorUploadProps) {
   const [allProducts, setAllProducts] = useState<ProductWithoutEmbedding[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchProducts = useCallback(async () => {
@@ -38,7 +39,36 @@ export function VendorUpload({ onProductAdded }: VendorUploadProps) {
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+}, [fetchProducts]);
+
+  const handleDeleteProduct = useCallback(async (productId: string) => {
+    if (deletingId) return; // Prevent multiple deletes at once
+    
+    setDeletingId(productId);
+    setError(null);
+
+    const response = await fetch(API_ENDPOINTS.deleteProduct(productId), {
+      method: "DELETE",
+    }).catch(() => null);
+
+    if (!response) {
+      setError("Network error while deleting product");
+      setDeletingId(null);
+      return;
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      setError(errorData.message || "Failed to delete product");
+      setDeletingId(null);
+      return;
+    }
+
+    // Remove from local state
+    setAllProducts((prev) => prev.filter((p) => p.id !== productId));
+    setDeletingId(null);
+    onProductAdded?.(); // Notify parent to refresh health/product count
+  }, [deletingId, onProductAdded]);
 
   const handleFileSelect = useCallback((file: File) => {
     if (file?.type.startsWith("image/")) {
@@ -309,19 +339,33 @@ export function VendorUpload({ onProductAdded }: VendorUploadProps) {
             );
           }
 
-          return (
+return (
             <div className="grid grid-cols-2 gap-3">
               {allProducts.map((product) => (
                 <div
                   className="group relative overflow-hidden rounded-xl border border-gray-700 bg-gray-800 p-3 transition-all hover:border-gray-600"
                   key={product.id}
                 >
+                  {/* Delete button */}
+                  <button
+                    className="absolute top-2 right-2 z-10 rounded-lg bg-red-900/80 p-1.5 text-red-400 opacity-0 transition-all hover:bg-red-800 hover:text-red-300 group-hover:opacity-100 disabled:opacity-50"
+                    disabled={deletingId === product.id}
+                    onClick={() => handleDeleteProduct(product.id)}
+                    title="Delete product"
+                    type="button"
+                  >
+                    {deletingId === product.id ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
                   <div className="aspect-square overflow-hidden rounded-lg bg-gray-700">
                     <img
                       alt={product.name}
                       className="h-full w-full object-cover transition-transform group-hover:scale-105"
                       height={128}
-                      src={product.imageBase64}
+                      src={product.imageUrl}
                       width={128}
                     />
                   </div>

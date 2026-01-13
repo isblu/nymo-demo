@@ -1,3 +1,13 @@
+/**
+ * Vector similarity utilities.
+ * 
+ * Note: For product search, we now use pgvector's built-in cosine distance
+ * operator (<=>`) directly in SQL queries (see store.ts findSimilarProducts).
+ * 
+ * These functions are kept for potential utility use cases outside of
+ * the main product search flow.
+ */
+
 export function dotProduct(a: number[], b: number[]): number {
   if (a.length !== b.length) {
     throw new Error(`Vector dimension mismatch: ${a.length} vs ${b.length}`);

@@ -10,11 +10,10 @@ import {
   userRelations,
   verification,
 } from "./auth-schema";
-import { posts, users } from "./schema";
+import { products } from "./schema";
 
 const schema = {
-  users,
-  posts,
+  products,
   user,
   session,
   account,
@@ -39,8 +38,6 @@ export function getDb() {
   return _db;
 }
 
-// For backwards compatibility - but prefer using getDb() for lazy initialization
-// This will throw at runtime if DATABASE_URL is not set when first accessed
 export const db = {
   get query() {
     return getDb().query;

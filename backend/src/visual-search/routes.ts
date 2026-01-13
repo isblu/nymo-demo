@@ -1,40 +1,46 @@
 import { Elysia } from "elysia";
+import { deleteProductImage, uploadProductImage } from "../storage";
 import { checkEmbeddingsHealth, embedImage, embedText } from "./embeddings";
-import { cosineSimilarity } from "./similarity";
 import {
   addProduct,
+  deleteProduct,
+  findSimilarProducts,
   getProductCount,
   getProducts,
-  getProductsWithEmbeddings,
 } from "./store";
 import type {
   AddProductResponse,
-  Product,
   ProductWithoutEmbedding,
   SearchResponse,
-  SearchResult,
 } from "./types";
 
-function toProductWithoutEmbedding(product: Product): ProductWithoutEmbedding {
-  const { ...rest } = product;
+function toProductWithoutEmbedding(product: {
+  id: string;
+  name: string;
+  imageUrl: string;
+  embedding: number[];
+  createdAt: Date;
+}): ProductWithoutEmbedding {
+  const { embedding: _, ...rest } = product;
   return rest;
 }
 
 export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
   .get("/health", async () => {
     const embeddingsOk = await checkEmbeddingsHealth();
+    const productCount = await getProductCount();
 
     return {
       status: "ok",
       services: {
         embeddings: embeddingsOk ? "connected" : "unavailable",
       },
-      productCount: getProductCount(),
+      productCount,
     };
   })
 
-  .get("/products", () => {
-    const products = getProducts();
+  .get("/products", async () => {
+    const products = await getProducts();
     console.log(`[VS] Listing ${products.length} products`);
     return { products };
   })
@@ -60,18 +66,25 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
     console.log(`[VS] Adding product: ${name}`);
 
     try {
+      // Generate a UUID for the product first (needed for image path)
+      const productId = crypto.randomUUID();
+
+      // Generate image embedding
       console.log("[VS] Generating image embedding...");
       const embedding = await embedImage(imageBase64);
 
-      const product: Product = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        imageBase64,
-        embedding,
-        createdAt: new Date(),
-      };
+      // Upload image to Supabase Storage
+      console.log("[VS] Uploading image to storage...");
+      const imageUrl = await uploadProductImage(imageBase64, productId);
 
-      addProduct(product);
+      // Save product to database
+      const product = await addProduct({
+        id: productId,
+        name: name.trim(),
+        imageUrl,
+        embedding,
+      });
+
       console.log(`[VS] Product added: ${product.id}`);
 
       const response: AddProductResponse = {
@@ -85,6 +98,42 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
       set.status = 500;
       return {
         error: "Failed to add product",
+        message: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  })
+
+  .delete("/products/:id", async ({ params, set }) => {
+    const { id } = params;
+
+    if (!id || typeof id !== "string") {
+      set.status = 400;
+      return { error: "Invalid request", message: "Product ID is required" };
+    }
+
+    console.log(`[VS] Deleting product: ${id}`);
+
+    try {
+      // Delete from database
+      const deleted = await deleteProduct(id);
+
+      if (!deleted) {
+        set.status = 404;
+        return { error: "Not found", message: "Product not found" };
+      }
+
+      // Delete image from storage (fire and forget - don't fail if image delete fails)
+      deleteProductImage(id).catch((err) => {
+        console.error("[VS] Failed to delete image from storage:", err);
+      });
+
+      console.log(`[VS] Product deleted: ${id}`);
+      return { success: true, message: "Product deleted successfully" };
+    } catch (error) {
+      console.error("[VS] Error deleting product:", error);
+      set.status = 500;
+      return {
+        error: "Failed to delete product",
         message: error instanceof Error ? error.message : "Unknown error",
       };
     }
@@ -107,42 +156,28 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
 
     console.log("[VS] Processing image search query...");
 
-    const products = getProductsWithEmbeddings();
-
-    if (products.length === 0) {
-      console.log("[VS] No products to search");
-      return {
-        results: [],
-        message: "No products in the database yet",
-      };
-    }
-
     try {
+      // Generate query image embedding
       console.log("[VS] Generating query image embedding...");
       const queryEmbedding = await embedImage(imageBase64);
 
-      console.log("[VS] Computing similarities...");
-      const scored = products.map((product) => ({
-        product,
-        score: cosineSimilarity(queryEmbedding, product.embedding),
-      }));
+      // Find similar products using pgvector
+      console.log("[VS] Searching for similar products...");
+      const results = await findSimilarProducts(queryEmbedding, effectiveTopK);
 
-      scored.sort((a, b) => b.score - a.score);
-      const topResults = scored.slice(0, effectiveTopK);
-
-      const results: SearchResult[] = topResults.map(({ product, score }) => ({
-        product: toProductWithoutEmbedding(product),
-        score: Math.round(score * 10_000) / 10_000,
-      }));
+      if (results.length === 0) {
+        console.log("[VS] No products found");
+        return {
+          results: [],
+          message: "No products in the database yet",
+        };
+      }
 
       console.log(
         `[VS] Found ${results.length} results, top score: ${results[0]?.score}`
       );
 
-      const response: SearchResponse = {
-        results,
-      };
-
+      const response: SearchResponse = { results };
       return response;
     } catch (error) {
       console.error("[VS] Error during image search:", error);
@@ -167,41 +202,28 @@ export const visualSearchRoutes = new Elysia({ prefix: "/vs" })
 
     console.log(`[VS] Processing text search: "${query}"`);
 
-    const products = getProductsWithEmbeddings();
-
-    if (products.length === 0) {
-      console.log("[VS] No products to search");
-      return {
-        results: [],
-        message: "No products in the database yet",
-      };
-    }
-
     try {
+      // Generate query text embedding
       console.log("[VS] Generating query text embedding...");
       const queryEmbedding = await embedText(query.trim());
 
-      console.log("[VS] Computing cross-modal similarities...");
-      const scored = products.map((product) => ({
-        product,
-        score: cosineSimilarity(queryEmbedding, product.embedding),
-      }));
+      // Find similar products using pgvector (cross-modal search)
+      console.log("[VS] Searching for similar products...");
+      const results = await findSimilarProducts(queryEmbedding, effectiveTopK);
 
-      scored.sort((a, b) => b.score - a.score);
-      const topResults = scored.slice(0, effectiveTopK);
-
-      const results: SearchResult[] = topResults.map(({ product, score }) => ({
-        product: toProductWithoutEmbedding(product),
-        score: Math.round(score * 10_000) / 10_000,
-      }));
+      if (results.length === 0) {
+        console.log("[VS] No products found");
+        return {
+          results: [],
+          message: "No products in the database yet",
+        };
+      }
 
       console.log(
         `[VS] Found ${results.length} results, top score: ${results[0]?.score}`
       );
 
-      return {
-        results,
-      };
+      return { results };
     } catch (error) {
       console.error("[VS] Error during text search:", error);
       set.status = 500;

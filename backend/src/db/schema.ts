@@ -1,20 +1,34 @@
-import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  vector,
+} from "drizzle-orm/pg-core";
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
-  displayName: text("display_name"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+// Embedding dimension for Jina CLIP v2 model (1024-dimensional vectors)
+export const EMBEDDING_DIMENSIONS = 1024;
 
-export const posts = pgTable("posts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: text("title").notNull(),
-  content: text("content"),
-  authorId: uuid("author_id").references(() => users.id, {
-    onDelete: "cascade",
-  }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+// Products table with vector embeddings for visual search
+export const products = pgTable(
+  "products",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    imageUrl: text("image_url").notNull(),
+    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // HNSW index for fast approximate nearest neighbor search using cosine distance
+    index("products_embedding_idx").using(
+      "hnsw",
+      table.embedding.op("vector_cosine_ops")
+    ),
+  ]
+);
+
+// Type inference helpers
+export type Product = typeof products.$inferSelect;
+export type NewProduct = typeof products.$inferInsert;

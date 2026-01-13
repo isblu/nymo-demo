@@ -42,11 +42,11 @@ function SearchResultCard({ result, index }: SearchResultCardProps) {
         animation: "fadeInUp 0.3s ease-out forwards",
       }}
     >
-      <img
+<img
         alt={result.product.name}
         className="h-20 w-20 flex-shrink-0 rounded-lg object-cover shadow-sm"
         height={128}
-        src={result.product.imageBase64}
+        src={result.product.imageUrl}
         width={128}
       />
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">

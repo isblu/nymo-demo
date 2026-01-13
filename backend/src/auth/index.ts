@@ -10,11 +10,10 @@ import {
   userRelations,
   verification,
 } from "../db/auth-schema";
-import { posts, users } from "../db/schema";
+import { products } from "../db/schema";
 
 const schema = {
-  users,
-  posts,
+  products,
   user,
   session,
   account,

@@ -1,15 +1,9 @@
-export type Product = {
-  id: string;
-  name: string;
-  imageBase64: string;
-  embedding: number[];
-  createdAt: Date;
-};
+export type { Product, NewProduct } from "../db/schema";
 
 export type ProductWithoutEmbedding = {
   id: string;
   name: string;
-  imageBase64: string;
+  imageUrl: string;
   createdAt: Date;
 };
 

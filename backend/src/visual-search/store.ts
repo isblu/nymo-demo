@@ -1,126 +1,128 @@
-import type { Product, ProductWithoutEmbedding } from "./types";
+import { eq, sql } from "drizzle-orm";
+import { getDb } from "../db";
+import { products, type NewProduct, type Product } from "../db/schema";
+import type { ProductWithoutEmbedding, SearchResult } from "./types";
 
-// In-memory store - products won't persist across serverless invocations
-// For production, use a database instead
-let products: Product[] = [];
+/**
+ * Add a new product to the database
+ */
+export async function addProduct(product: NewProduct): Promise<Product> {
+  const db = getDb();
 
-// Check if we're in a serverless environment
-const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+  const [inserted] = await db.insert(products).values(product).returning();
 
-// Only attempt file operations in non-serverless environments
-let fsModule: typeof import("node:fs") | null = null;
-let pathModule: typeof import("node:path") | null = null;
-let DATA_DIR = "";
-let PRODUCTS_FILE = "";
-
-async function initFileSystem(): Promise<boolean> {
-  if (isServerless) {
-    console.log("[Store] Running in serverless mode - using in-memory store only");
-    return false;
+  if (!inserted) {
+    throw new Error("Failed to insert product");
   }
 
-  try {
-    fsModule = await import("node:fs");
-    pathModule = await import("node:path");
-    
-    // Use process.cwd() instead of import.meta.url for better compatibility
-    DATA_DIR = pathModule.join(process.cwd(), "data");
-    PRODUCTS_FILE = pathModule.join(DATA_DIR, "products.json");
-    return true;
-  } catch (error) {
-    console.log("[Store] File system not available, using in-memory store");
-    return false;
-  }
+  console.log(`[Store] Product added: ${inserted.id}`);
+  return inserted;
 }
 
-function ensureDataDir(): void {
-  if (!fsModule || !DATA_DIR) return;
-  
-  if (!fsModule.existsSync(DATA_DIR)) {
-    fsModule.mkdirSync(DATA_DIR, { recursive: true });
-    console.log("[Store] Created data directory:", DATA_DIR);
-  }
+/**
+ * Get all products without embeddings (for listing)
+ */
+export async function getProducts(): Promise<ProductWithoutEmbedding[]> {
+  const db = getDb();
+
+  const results = await db
+    .select({
+      id: products.id,
+      name: products.name,
+      imageUrl: products.imageUrl,
+      createdAt: products.createdAt,
+    })
+    .from(products)
+    .orderBy(products.createdAt);
+
+  return results;
 }
 
-async function loadProducts(): Promise<void> {
-  const fsAvailable = await initFileSystem();
-  if (!fsAvailable || !fsModule || !PRODUCTS_FILE) {
-    console.log("[Store] Starting with empty in-memory store");
-    return;
-  }
+/**
+ * Get a single product by ID
+ */
+export async function getProductById(id: string): Promise<Product | undefined> {
+  const db = getDb();
 
-  ensureDataDir();
+  const [product] = await db.select().from(products).where(eq(products.id, id));
 
-  if (fsModule.existsSync(PRODUCTS_FILE)) {
-    try {
-      const data = fsModule.readFileSync(PRODUCTS_FILE, "utf-8");
-      const parsed = JSON.parse(data);
-
-      products = parsed.map((p: Product & { createdAt: string }) => ({
-        ...p,
-        createdAt: new Date(p.createdAt),
-      }));
-
-      console.log(`[Store] Loaded ${products.length} products from file`);
-    } catch (error) {
-      console.error("[Store] Error loading products:", error);
-      products = [];
-    }
-  } else {
-    console.log("[Store] No existing products file, starting fresh");
-    products = [];
-  }
-}
-
-function saveProducts(): void {
-  if (!fsModule || !PRODUCTS_FILE || isServerless) return;
-
-  ensureDataDir();
-
-  try {
-    const data = JSON.stringify(products, null, 2);
-    fsModule.writeFileSync(PRODUCTS_FILE, data, "utf-8");
-    console.log(`[Store] Saved ${products.length} products to file`);
-  } catch (error) {
-    console.error("[Store] Error saving products:", error);
-  }
-}
-
-// Initialize store (don't block module loading)
-let initialized = false;
-async function ensureInitialized(): Promise<void> {
-  if (!initialized) {
-    initialized = true;
-    await loadProducts();
-  }
-}
-
-// Call initialization but don't await at module level
-ensureInitialized().catch(console.error);
-
-export function addProduct(product: Product): Product {
-  products.push(product);
-  saveProducts();
   return product;
 }
 
-export function getProducts(): ProductWithoutEmbedding[] {
-  return products.map(({ embedding, ...rest }) => rest);
+/**
+ * Get total product count
+ */
+export async function getProductCount(): Promise<number> {
+  const db = getDb();
+
+  const result = await db.select({ count: sql<number>`count(*)` }).from(products);
+
+  return Number(result[0]?.count ?? 0);
 }
 
-export function getProductById(id: string): Product | undefined {
-  return products.find((p) => p.id === id);
+/**
+ * Delete a product by ID
+ */
+export async function deleteProduct(id: string): Promise<boolean> {
+  const db = getDb();
+
+  const result = await db.delete(products).where(eq(products.id, id)).returning();
+
+  return result.length > 0;
 }
 
-export function getProductsWithEmbeddings(): Product[] {
-  return products;
+/**
+ * Delete all products
+ */
+export async function clearProducts(): Promise<void> {
+  const db = getDb();
+
+  await db.delete(products);
+  console.log("[Store] All products cleared");
 }
 
-export function clearProducts(): void {
-  products.length = 0;
-  saveProducts();
-}
+/**
+ * Find similar products using vector cosine similarity
+ * Uses pgvector's <=> operator for cosine distance
+ */
+export async function findSimilarProducts(
+  queryEmbedding: number[],
+  topK: number
+): Promise<SearchResult[]> {
+  const db = getDb();
 
-export function getProductCount(): number {
-  return products.length;
+  // Format the embedding as a vector string for pgvector
+  const vectorStr = `[${queryEmbedding.join(",")}]`;
+
+  // Use raw SQL for vector similarity search
+  // The <=> operator computes cosine distance (1 - cosine_similarity)
+  // So we compute 1 - distance to get similarity score
+  const results = await db.execute(sql`
+    SELECT 
+      id,
+      name,
+      image_url,
+      created_at,
+      1 - (embedding <=> ${vectorStr}::vector) as score
+    FROM products
+    ORDER BY embedding <=> ${vectorStr}::vector
+    LIMIT ${topK}
+  `);
+
+  // postgres.js returns rows directly as an array
+  return (results as unknown as Array<{
+    id: string;
+    name: string;
+    image_url: string;
+    created_at: Date;
+    score: number;
+  }>).map((row) => ({
+    product: {
+      id: row.id,
+      name: row.name,
+      imageUrl: row.image_url,
+      createdAt: new Date(row.created_at),
+    },
+    score: Math.round(row.score * 10_000) / 10_000,
+  }));
 }

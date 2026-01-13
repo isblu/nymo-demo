@@ -2,6 +2,7 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
 
 export const API_ENDPOINTS = {
   products: `${SERVER_URL}/vs/products`,
+  deleteProduct: (id: string) => `${SERVER_URL}/vs/products/${id}`,
   search: `${SERVER_URL}/vs/search`,
   textSearch: `${SERVER_URL}/vs/search/text`,
   health: `${SERVER_URL}/vs/health`,
@@ -10,7 +11,7 @@ export const API_ENDPOINTS = {
 export type ProductWithoutEmbedding = {
   id: string;
   name: string;
-  imageBase64: string;
+  imageUrl: string;
   createdAt: string;
 };
 
